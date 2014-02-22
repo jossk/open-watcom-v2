@@ -115,15 +115,10 @@ void GUIToolBarHelp( HWND hwnd, WPI_PARAM1 id, BOOL down )
 
 BOOL GUIToolBarProc( HWND hwnd, WPI_MSG msg, WPI_PARAM1 wparam, WPI_PARAM2 lparam )
 {
-#ifdef __WINDOWS_386__
-    WPI_MINMAXINFO FAR  *minmax;
-#else
-    WPI_MINMAXINFO      *minmax;
-#endif
-    gui_window          *wnd;
-    toolbarinfo         *toolbar;
-    HMENU               hmenu;
-    WORD                param;
+    gui_window              *wnd;
+    toolbarinfo             *toolbar;
+    HMENU                   hmenu;
+    WORD                    param;
 
     wnd = GetToolWnd( hwnd );
     if( wnd == NULL ) {
@@ -198,18 +193,16 @@ BOOL GUIToolBarProc( HWND hwnd, WPI_MSG msg, WPI_PARAM1 wparam, WPI_PARAM2 lpara
         }
         break;
     case WM_GETMINMAXINFO:
+        {
 #ifdef __WINDOWS_386__
-        minmax = (WPI_MINMAXINFO FAR *)MK_FP32( (void *)lparam );
+            WPI_MINMAXINFO __far *minmax= (WPI_MINMAXINFO __far *)MK_FP32( (void *)lparam );
 #else
-        minmax = (WPI_MINMAXINFO *)lparam;
+            WPI_MINMAXINFO *minmax = (WPI_MINMAXINFO *)lparam;
 #endif
-        _wpi_setmintracksize( minmax, ( toolbar->info.border_size.x +
-                                     _wpi_getsystemmetrics( SM_CXFRAME ) ) * 2 +
-                                    toolbar->info.button_size.x,
-                                    ( toolbar->info.border_size.y +
-                                     _wpi_getsystemmetrics( SM_CYFRAME ) ) * 2 +
-                                     toolbar->info.button_size.y +
-                                     _wpi_getsystemmetrics( SM_CYCAPTION ) );
+            _wpi_setmintracksize( minmax, 
+                ( toolbar->info.border_size.x + _wpi_getsystemmetrics( SM_CXFRAME ) ) * 2 + toolbar->info.button_size.x,
+                ( toolbar->info.border_size.y + _wpi_getsystemmetrics( SM_CYFRAME ) ) * 2 + toolbar->info.button_size.y + _wpi_getsystemmetrics( SM_CYCAPTION ) );
+        }
         break;
     case WM_CLOSE :
         GUICloseToolBar( wnd );
@@ -249,6 +242,8 @@ bool GUIXCreateToolBarWithTips( gui_window *wnd, bool fixed, gui_ord height,
     excl = excl;
     plain = plain;
     standout = standout;
+    fixed_height = 0;
+    fixed_width = 0;
     if( ( wnd == NULL ) || ( num_toolbar_items < 1 ) || ( toolinfo == NULL ) ||
         ( wnd->hwnd == NULLHANDLE ) || ( wnd->root == NULLHANDLE ) ) {
         return( FALSE );
@@ -269,10 +264,6 @@ bool GUIXCreateToolBarWithTips( gui_window *wnd, bool fixed, gui_ord height,
         GUIMemFree( wnd->toolbar );
         wnd->toolbar = NULL;
         return( FALSE );
-    }
-    if( height == 0 ) {
-        fixed_height = 0;
-        fixed_width = 0;
     }
     for( i = 0; i < num_toolbar_items; i++ ) {
         toolbar->bitmaps[i] = _wpi_loadbitmap( GUIResHInst,
@@ -360,7 +351,7 @@ bool GUIXCreateToolBarWithTips( gui_window *wnd, bool fixed, gui_ord height,
 
     for( i = 0; i < num_toolbar_items; i++ ) {
         info.u.bmp = toolbar->bitmaps[i];
-        info.id = toolinfo[i].id;
+        info.id = (WORD)toolinfo[i].id;
         info.flags = 0;
         if( use_tips && toolinfo[i].tip != NULL ) {
             strncpy( info.tip, toolinfo[i].tip, MAX_TIP );

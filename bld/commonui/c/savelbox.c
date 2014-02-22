@@ -45,6 +45,7 @@
 #endif
 #include "ldstr.h"
 #include "uistr.gh"
+#include "wprocmap.h"
 
 /*
  * writeListBoxContents
@@ -82,7 +83,7 @@ static BOOL writeListBoxContents( void (*writefn)( FILE * ), char *fname, HWND l
 /*
  * LBSaveHook - hook used called by common dialog - for 3D controls
  */
-WINEXPORT BOOL CALLBACK LBSaveHook( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
+WINEXPORT UINT_PTR CALLBACK LBSaveHook( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
 {
     wparam = wparam;
     lparam = lparam;
@@ -128,12 +129,11 @@ BOOL GetSaveFName( HWND mainhwnd, char *fname )
     of.Flags = OFN_HIDEREADONLY;
 #ifndef NOUSE3D
     of.Flags |= OFN_ENABLEHOOK;
-    of.lpfnHook = (LPOFNHOOKPROC)MakeProcInstance( (LPVOID)LBSaveHook,
-                                                   GET_HINSTANCE( mainhwnd ) );
+    of.lpfnHook = (LPOFNHOOKPROC)MakeOpenFileHookProcInstance( LBSaveHook, GET_HINSTANCE( mainhwnd ) );
 #endif
     rc = GetSaveFileName( &of );
 #ifndef NOUSE3D
-    FreeProcInstance( (LPVOID)of.lpfnHook );
+    FreeProcInstance( (FARPROC)of.lpfnHook );
 #endif
     return( rc );
 

@@ -34,7 +34,7 @@
 #include "wpi.h"
 #include "mem.h"
 #include "pushwin.h"
-
+#include "wprocmap.h"
 
 #define WPI_GET_WNDINFO( w )    ((PushWinInfo *)_wpi_getwindowlongptr( w, 0 ))
 #define WPI_SET_WNDINFO( w, d ) (_wpi_setwindowlongptr( w, 0, d ))
@@ -88,7 +88,7 @@ BOOL RegPushWin( HANDLE instance )
     WNDCLASS    wc;
 
     wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = (WNDPROC)PushWinProc;
+    wc.lpfnWndProc = GetWndProc( PushWinProc );
     wc.cbClsExtra = 0;
     wc.cbWndExtra = sizeof( LONG_PTR );
     wc.hInstance = instance;
@@ -111,7 +111,7 @@ HWND CreatePushWin( HWND parent, char *txt, WORD id, HFONT font, HANDLE inst )
 {
     HWND                hwnd;
     PushWinInfo         *info;
-    WORD                len;
+    size_t              len;
 
     len = strlen( txt ) + 1;
     info = MemAlloc( sizeof( PushWinInfo ) + len );

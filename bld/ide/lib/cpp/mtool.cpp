@@ -30,10 +30,9 @@
 ****************************************************************************/
 
 
-#include "mtool.hpp"
+#include "wobjfile.hpp"
 #include "mconfig.hpp"
 #include "mfamily.hpp"
-#include "wobjfile.hpp"
 #include "mtypo.hpp"
 
 Define( MTool )
@@ -48,10 +47,28 @@ MTool::MTool( WTokenFile& fil, WString& tok )
             _families.add( new MFamily( fil, tok ) );
         } else if( tok == "IncludeTool" ) {
             MTool* tool = _config->findTool( fil.token( tok ) );
-            if( tool ) {
+            if( tool != NULL ) {
                 _incTools.add( tool );
             }
             fil.token( tok );
+#if CUR_CFG_VERSION > 4
+        } else if( _config->version() > 4 && tok == "SwitchText" ) {
+            WString id;
+            fil.token( id );
+            fil.token( tok );
+            if( tok.size() > 0 ) {
+                _switchesTexts.setThis( new WString( tok ), new WString( id ) );
+            }
+            // define map "text -> id" for older versions of project files
+            while( !fil.eol() ) {
+                fil.token( tok );
+                if( tok.size() > 0 ) {
+                    // define new switch text for map
+                    _switchesIds.setThis( new WString( id ), new WString( tok ) );
+                }
+            }
+            fil.token( tok );
+#endif
         } else if( tok == "Help" ) {
             fil.token( _help );
             fil.token( tok );
@@ -73,6 +90,10 @@ MTool::MTool( const char* name, const char* tag )
 MTool::~MTool()
 {
     _families.deleteContents();
+#if CUR_CFG_VERSION > 4
+    _switchesTexts.deleteContents();
+    _switchesIds.deleteContents();
+#endif
 }
 
 #ifndef NOPERSIST
@@ -109,7 +130,7 @@ MSwitch* WEXPORT MTool::findSwitch( WString& switchtag, long fixed_version )
     // It is very hard to detect what was broken in each OW version because
     // there vere no change to version number of project files
     //
-    if( fixed_version != 0 && fixed_version < 41 && _config->version() == 4 ) {
+    if( fixed_version != 0 && fixed_version < 41 && _config->version() < 5 ) {
         //
         // hack for buggy version of configuration/project files
         //
@@ -118,7 +139,7 @@ MSwitch* WEXPORT MTool::findSwitch( WString& switchtag, long fixed_version )
     int icount = _families.count();
     for( int i = 0; i < icount; i++ ) {
         MFamily* family = (MFamily*)_families[i];
-        MSwitch* sw = family->findSwitch( switchtag, fixed_version );
+        MSwitch* sw = family->findSwitch( this, switchtag, fixed_version );
         if( sw != NULL ) {
             return sw;
         }
@@ -133,6 +154,65 @@ MSwitch* WEXPORT MTool::findSwitch( WString& switchtag, long fixed_version )
     }
     return NULL;
 }
+
+WString *WEXPORT MTool::displayText( MSwitch *sw, WString& text, bool first )
+{
+#if CUR_CFG_VERSION > 4
+    WString *switchid = &sw->text();
+    WString *switchtext;
+    int icount;
+
+    if( _config->version() > 4 ) {
+        switchtext = (WString *)_switchesTexts.findThis( switchid );
+        if( switchtext != NULL ) {
+            text = *switchtext;
+            sw->displayText( text );
+            return &text;
+        }
+        icount = _incTools.count();
+        for( int i = 0; i < icount; i++ ) {
+            MTool* tool = (MTool*)_incTools[i];
+            if( tool->displayText( sw, text, false ) != NULL ) {
+                return &text;
+            }
+        }
+        if( !first ) {
+            return NULL;
+        }
+    }
+    text = *switchid;
+#else
+    first = first;
+    text = sw->text();
+#endif
+    sw->displayText( text );
+    return &text;
+}
+
+#if CUR_CFG_VERSION > 4
+WString* WEXPORT MTool::findSwitchByText( WString& id, WString& text, int kludge )
+{
+    int icount;
+
+    if( kludge == 0 ) {         // check current text
+        if( text.isEqual( (WString *)_switchesTexts.findThis( &id ) ) ) {
+            return &id;
+        }
+    } else if( kludge == 1 ) {  // check old text
+        if( id.isEqual( (WString *)_switchesIds.findThis( &text, &id ) ) ) {
+            return &id;
+        }
+    }
+    icount = _incTools.count();
+    for( int i = 0; i < icount; i++ ) {
+        MTool* tool = (MTool*)_incTools[i];
+        if( tool->findSwitchByText( id, text, kludge ) != NULL ) {
+            return &id;
+        }
+    }
+    return NULL;
+}
+#endif
 
 bool MTool::hasSwitches( bool setable )
 {

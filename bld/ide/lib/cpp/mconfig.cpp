@@ -31,7 +31,6 @@
 
 
 #include "mconfig.hpp"
-#include "mtool.hpp"
 #include "mrule.hpp"
 #include "mtarget.hpp"
 #include "mtoolitm.hpp"
@@ -243,7 +242,7 @@ bool MConfig::readFile( const WFileName& filename, bool reqd )
             } else if( tok == "rem" ) {
                 fil.flushLine( tok );
                 fil.token( tok );
-            } else if( _version == 4 && tok == "Compat" ) {
+            } else if( _version < 5 && tok == "Compat" ) {
                 WString good;
                 WString bad;
                 fil.token( good );
@@ -524,7 +523,7 @@ void MConfig::zapMask( WString& mask )
     }
 }
 
-void MConfig::kludgeString( WString& str )
+void MConfig::kludgeMask( WString& str )
 {
     if( _kludge ) {
         WString temp;

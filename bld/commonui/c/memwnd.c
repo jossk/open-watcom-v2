@@ -54,6 +54,7 @@
 #include "wpi.h"
 #include "ldstr.h"
 #include "uistr.gh"
+#include "wprocmap.h"
 
 #define ISCODE( x )     ((x)->disp_type == MEMINFO_CODE_16 || \
                         (x)->disp_type == MEMINFO_CODE_32)
@@ -92,6 +93,7 @@ static DWORD Disp_Types[] = {
 
 /* forward declarations */
 WINEXPORT LRESULT CALLBACK MemDisplayProc( HWND, UINT, WPARAM, LPARAM );
+WINEXPORT INT_PTR CALLBACK SegInfoProc( HWND, UINT, WPARAM, LPARAM );
 static void calcTextDimensions( HWND hwnd, HDC dc, MemWndInfo *info );
 static void displaySegInfo( HWND parent, HANDLE instance, MemWndInfo *info );
 static void positionSegInfo( HWND hwnd );
@@ -257,7 +259,7 @@ static void MemSave( MemWndInfo *info, HWND hwnd, BOOL gen_name )
     DWORD       offset;
     DWORD       limit;
     int         hdl;
-    unsigned    len;
+    size_t      len;
     BOOL        ret;
     HCURSOR     hourglass;
     HCURSOR     oldcursor;
@@ -311,7 +313,7 @@ BOOL RegMemWndClass( HANDLE instance )
     WNDCLASS    wc;
 
     wc.style = 0L;
-    wc.lpfnWndProc = (WNDPROC)MemDisplayProc;
+    wc.lpfnWndProc = GetWndProc( MemDisplayProc );
     wc.cbClsExtra = 0;
     wc.cbWndExtra = sizeof( LONG_PTR );
     wc.hInstance = instance;
@@ -817,7 +819,7 @@ static void scrollData( HWND hwnd, WORD wparam, WORD pos, MemWndInfo *info )
 /*
  * OffsetProc
  */
-WINEXPORT BOOL CALLBACK OffsetProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
+WINEXPORT INT_PTR CALLBACK OffsetProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
 {
     char                buf[41];
     unsigned long       offset;
@@ -895,7 +897,7 @@ WINEXPORT BOOL CALLBACK OffsetProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
 /*
  * MemDisplayProc
  */
-LRESULT CALLBACK MemDisplayProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
+WINEXPORT LRESULT CALLBACK MemDisplayProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
 {
     HDC                 dc;
     MemWndInfo          *info;
@@ -947,7 +949,7 @@ LRESULT CALLBACK MemDisplayProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
         } else {
             info->maximized = FALSE;
         }
-        resizeMemBox( hwnd, lparam, info );
+        resizeMemBox( hwnd, (DWORD)lparam, info );
     case WM_MOVE:
         if( info->autopos && IsWindow( info->dialog ) ) {
             positionSegInfo( info->dialog );
@@ -1064,7 +1066,7 @@ LRESULT CALLBACK MemDisplayProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
             break;
         case MEMINFO_OFFSET:
             inst = GET_HINSTANCE( hwnd );
-            fp = MakeProcInstance( (FARPROC)OffsetProc, inst );
+            fp = MakeDlgProcInstance( OffsetProc, inst );
             DialogBox( inst, "OFFSETDLG", hwnd, (DLGPROC)fp );
             FreeProcInstance( fp );
             break;
@@ -1156,7 +1158,7 @@ static void positionSegInfo( HWND hwnd )
 /*
  * SegInfoProc
  */
-WINEXPORT BOOL CALLBACK SegInfoProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
+WINEXPORT INT_PTR CALLBACK SegInfoProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
 {
     HWND        parent;
     HMENU       mh;
@@ -1217,7 +1219,7 @@ static void displaySegInfo( HWND parent, HANDLE instance, MemWndInfo *info )
     mh = GetMenu( parent );
     EnableMenuItem( mh, MEMINFO_SHOW, MF_GRAYED );
     if( DialCount == 0 ) {
-        DialProc = MakeProcInstance( (FARPROC)SegInfoProc, instance );
+        DialProc = MakeDlgProcInstance( SegInfoProc, instance );
     }
     DialCount++;
     if( info->isdpmi ) {

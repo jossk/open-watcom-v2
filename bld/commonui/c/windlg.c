@@ -34,6 +34,7 @@
 #include "wpi.h"
 #include <string.h>
 #include <stdlib.h>
+#include "wprocmap.h"
 #include "windlg.h"
 
 /*
@@ -101,23 +102,23 @@ TEMPLATE_HANDLE DialogTemplate( LONG dtStyle, int dtx, int dty, int dtcx,
     data = GlobalAlloc( GMEM_MOVEABLE | GMEM_ZEROINIT, blocklen );
     if( data == NULL ) return( NULL );
 
-    numbytes = (UINT _ISFAR *) MK_FP32( GlobalLock( data ) );
-    *numbytes = (UINT) blocklen;
+    numbytes = GetPtrGlobalLock( data );
+    *numbytes = (UINT)blocklen;
 
     /*
      * set up template
      */
 
-    dt = (_DLGTEMPLATE _ISFAR *) (numbytes + 1);
+    dt = (_DLGTEMPLATE _ISFAR *)( numbytes + 1 );
 
     dt->dtStyle = dtStyle;
     dt->dtItemCount = 0;
-    dt->dtX = dtx;
-    dt->dtY = dty;
-    dt->dtCX = dtcx;
-    dt->dtCY = dtcy;
+    dt->dtX = (WORD)dtx;
+    dt->dtY = (WORD)dty;
+    dt->dtCX = (WORD)dtcx;
+    dt->dtCY = (WORD)dtcy;
 
-    dlgtemp = (char _ISFAR *) (dt + 1);
+    dlgtemp = (char _ISFAR *)( dt + 1 );
 
     /*
      * add extra strings to block
@@ -131,14 +132,14 @@ TEMPLATE_HANDLE DialogTemplate( LONG dtStyle, int dtx, int dty, int dtcx,
      * add font data (if needed)
      */
     if (dtStyle & DS_SETFONT) {
-      #ifdef ALIGN_WORDS
-          fi = (FONTINFO _ISFAR *) ((u_int)dlgtemp + 4 - (u_int)dlgtemp % 4);
-      #else
-          fi = (FONTINFO _ISFAR *) dlgtemp;
-      #endif
-      fi->PointSize = pointsize;
-      dlgtypeface = (char _ISFAR *) (fi + 1);
-      copyString( dlgtypeface, typeface, typefacelen );
+#ifdef ALIGN_WORDS
+        fi = (FONTINFO _ISFAR *)( (u_int)dlgtemp + 4 - ( (u_int)dlgtemp % 4 ) );
+#else
+        fi = (FONTINFO _ISFAR *)dlgtemp;
+#endif
+        fi->PointSize = (WORD)pointsize;
+        dlgtypeface = (char _ISFAR *) (fi + 1);
+        copyString( dlgtypeface, typeface, typefacelen );
     }
 
     GlobalUnlock( data );
@@ -169,7 +170,7 @@ TEMPLATE_HANDLE AddControl ( TEMPLATE_HANDLE data, int dtilx, int dtily,
     /*
      * compute size of block, reallocate block to hold this stuff
      */
-#if defined(__NT__) && (!defined(__DEC__) || !defined( TWIN ))
+#if defined(__NT__)
 
     classlen = 2;
     if( !stricmp( class, "combobox" ) ) {
@@ -192,17 +193,17 @@ TEMPLATE_HANDLE AddControl ( TEMPLATE_HANDLE data, int dtilx, int dtily,
 #endif
     textlen  = SLEN( text );
 
-    blocklen = sizeof( _DLGITEMTEMPLATE ) + classlen + textlen +
-               sizeof( INFOTYPE ) + infolen;
+    blocklen = sizeof( _DLGITEMTEMPLATE ) + classlen + textlen + sizeof( INFOTYPE ) + infolen;
     ADJUST_ITEMLEN( blocklen );
 
-    blocklen += *(UINT _ISFAR *) MK_FP32( GlobalLock( data ) );
+    blocklen += *(UINT _ISFAR *)GetPtrGlobalLock( data );
     GlobalUnlock( data );
 
     new = GlobalReAlloc( data, blocklen, GMEM_MOVEABLE | GMEM_ZEROINIT );
-    if( new == NULL ) return( NULL );
+    if( new == NULL )
+        return( NULL );
 
-    numbytes = (UINT _ISFAR *) MK_FP32( GlobalLock( new ) );
+    numbytes = GetPtrGlobalLock( new );
 
     /*
      * one more item...
@@ -216,11 +217,11 @@ TEMPLATE_HANDLE AddControl ( TEMPLATE_HANDLE data, int dtilx, int dtily,
      */
     dit = (_DLGITEMTEMPLATE _ISFAR *) (((char _ISFAR *) numbytes) + *numbytes);
     dit->dtilStyle = style;
-    dit->dtilX = dtilx;
-    dit->dtilY = dtily;
-    dit->dtilCX = dtilcx;
-    dit->dtilCY = dtilcy;
-    dit->dtilID = id;
+    dit->dtilX = (WORD)dtilx;
+    dit->dtilY = (WORD)dtily;
+    dit->dtilCX = (WORD)dtilcx;
+    dit->dtilCY = (WORD)dtilcy;
+    dit->dtilID = (WORD)id;
 #if defined(__NT__) && !defined(__DEC__)
     dit->crap = 0xffff;
 #endif
@@ -251,9 +252,10 @@ TEMPLATE_HANDLE AddControl ( TEMPLATE_HANDLE data, int dtilx, int dtily,
  */
 TEMPLATE_HANDLE DoneAddingControls( TEMPLATE_HANDLE data )
 {
-    UINT        FAR *numbytes;
+    UINT       _ISFAR *numbytes;
 
-    numbytes = (UINT _ISFAR *) MK_FP32( GlobalLock( data ) );
+    numbytes = GetPtrGlobalLock( data );
+
     // This next line is dangerous, for a couple of reasons.
     // 1. The 2 at the end should be sizeof( UINT ).
     // 2. There should be parentheses around the *numbytes, for code readability.
@@ -276,28 +278,24 @@ TEMPLATE_HANDLE DoneAddingControls( TEMPLATE_HANDLE data )
 /*
  * DynamicDialogBox - create a dynamic dialog box
  */
-int DynamicDialogBox( LPVOID fn, HANDLE inst, HWND hwnd, TEMPLATE_HANDLE data, LONG lparam )
+INT_PTR DynamicDialogBox( DLGPROCx dlgfn, HINSTANCE inst, HWND hwnd, TEMPLATE_HANDLE data, LPARAM lparam )
 {
-    WPI_PROC    fp;
-    int         rc;
+    FARPROC     fp;
+    INT_PTR     rc;
 
-#if defined( WINDU )
-    return( -1 );
-#else
-    fp = _wpi_makeprocinstance( fn, inst );
-#if defined(__NT__) || defined(TWIN32)
+    fp = MakeDlgProcInstance( dlgfn, inst );
+#if defined(__NT__)
     {
         LPCSTR  ptr;
         ptr = GlobalLock( data );
-        rc = DialogBoxIndirectParam( (HINSTANCE)inst, (LPCDLGTEMPLATE)ptr, hwnd, (DLGPROC)fp, (LPARAM)lparam );
+        rc = DialogBoxIndirectParam( inst, (LPCDLGTEMPLATE)ptr, hwnd, (DLGPROC)fp, lparam );
         GlobalUnlock( data );
     }
 #else
-    rc = DialogBoxIndirectParam( inst, data, hwnd, (LPVOID) fp, lparam );
+    rc = DialogBoxIndirectParam( inst, data, hwnd, (DLGPROC)fp, lparam );
 #endif
     FreeProcInstance( fp );
     GlobalFree( data );
     return( rc );
-#endif
 
 } /* DynamicDialogBox */

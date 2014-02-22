@@ -31,13 +31,14 @@
 
 #ifndef __OS2__
 
+#include "wclbproc.h"
+
 #ifdef __NT__
 
 #define ADJUST_ITEMLEN( a )     a = (((a)+7) & ~7)
 #define ADJUST_BLOCKLEN( a )    a = (((a)+3) & ~3)
 #define ROUND_CLASSLEN( a )     (((a)+1) & ~1)
 #define _FARmemcpy              memcpy
-#define MK_FP32( a )            a
 #define _ISFAR
 #define SLEN( a )               (strlen((a))*2+2)
 typedef WORD INFOTYPE;
@@ -54,60 +55,7 @@ typedef BYTE INFOTYPE;
 
 #endif
 
-#ifdef __NT__
-    #include <pshpack2.h>
-#else
-    #pragma pack( push, 1 )
-#endif
-
-typedef struct {
-    DWORD   dtStyle;
-#ifdef __NT__
-    DWORD   dtExtendedStyle;
-    WORD    dtItemCount;
-#else
-    BYTE    dtItemCount;
-#endif
-    WORD    dtX;
-    WORD    dtY;
-    WORD    dtCX;
-    WORD    dtCY;
-//  char    dtMenuName[];
-//  char    dtClassName[];
-//  char    dtCaptionText[];
-} _DLGTEMPLATE;
-
-typedef struct {
-    WORD    PointSize;
-//  char    szTypeFace[];
-} FONTINFO;
-
-typedef struct {
-#ifdef __NT__
-    DWORD   dtilStyle;
-    DWORD   dtExtendedStyle;
-#endif
-    WORD    dtilX;
-    WORD    dtilY;
-    WORD    dtilCX;
-    WORD    dtilCY;
-    WORD    dtilID;
-#ifdef __NT__
-    WORD    crap;
-#else
-    DWORD   dtilStyle;
-#endif
-//  char    dtilClass[];
-//  char    dtilText[];
-//  BYTE    dtilInfo;
-//  BYTE    dtilData;
-} _DLGITEMTEMPLATE;
-
-#ifdef __NT__
-    #include <poppack.h>
-#else
-    #pragma pack( pop )
-#endif
+#include "_windlg.h"
 
 extern GLOBALHANDLE _DialogTemplate( LONG dtStyle, int dtx, int dty, int dtcx,
                        int dtcy, char *menuname, char *classname,
@@ -116,6 +64,6 @@ extern void _DoneAddingControls( GLOBALHANDLE data );
 extern GLOBALHANDLE _AddControl( GLOBALHANDLE data, int dtilx, int dtily,
                    int dtilcx, int dtilcy, int id, long style, char *class,
                    char *text, BYTE infolen, char *infodata );
-int _DynamicDialogBox( LPVOID fn, HANDLE inst, HWND hwnd, GLOBALHANDLE data );
+INT_PTR _DynamicDialogBox( DLGPROCx fn, HANDLE inst, HWND hwnd, GLOBALHANDLE data );
 
 #endif

@@ -96,8 +96,11 @@ extern void _wpi_getpaintrect( PAINTSTRUCT *ps, WPI_RECT *rect );
 
     #define _wpi_muldiv( a, b, c ) MulDiv( a, b, c )
 
-void _wpi_setmaxtracksize( WPI_MINMAXINFO _W386FAR *info, int width, int height );
-void _wpi_setmintracksize( WPI_MINMAXINFO _W386FAR *info, int width, int height );
+    #define _wpi_setmaxtracksize(info,width,height) \
+        info->ptMaxSize.x = width; info->ptMaxSize.y = height
+
+    #define _wpi_setmintracksize(info,width,height) \
+        info->ptMinTrackSize.x = width; info->ptMinTrackSize.y = height
 
     #define _wpi_setdoubleclicktime( rate ) SetDoubleClickTime( rate )
 
@@ -335,7 +338,7 @@ extern void _wpi_getbitmapdim( HBITMAP bmp, int *pwidth, int *pheight );
     #define _wpi_enddialog( hwnd, result ) EndDialog( hwnd, result )
 
     #define _wpi_dialogbox( parent, proc, inst, res_id, data ) \
-        DialogBoxParam( inst, res_id, parent, (DLGPROC)proc, (DWORD)(LPARAM)(data) )
+        DialogBoxParam( inst, res_id, parent, proc, (DWORD)(LPARAM)(data) )
 
     #define _wpi_setstretchbltmode( mem, mode ) SetStretchBltMode( mem, mode )
 
@@ -723,10 +726,10 @@ extern int _wpi_getmetricpointsize( WPI_PRES pres, WPI_TEXTMETRIC *tm,
     #define _wpi_metricmaxcharwidth( metric ) ( (metric).tmMaxCharWidth )
 
     #define _wpi_enumfonts( pres, facename, proc, data ) \
-        EnumFonts( pres, (LPSTR)facename, (FARPROC)(proc), (LPSTR)(data) )
+        EnumFonts( pres, (LPSTR)facename, proc, (LPSTR)(data) )
 
     #define _wpi_enumchildwindows( hwnd, proc, lp ) \
-                EnumChildWindows( (HWND)(hwnd), (WNDENUMPROC)(proc), (LPARAM)(lp) )
+                EnumChildWindows( hwnd, proc, lp )
 
     #define _wpi_getnextwindow( hwnd ) GetNextWindow( hwnd, GW_HWNDNEXT )
 

@@ -35,6 +35,8 @@
 #include <stdlib.h>
 #include "wi163264.h"
 #include "desknt.h"
+#include "wprocmap.h"
+
 
 static HBITMAP  deskTopBitmap;
 static short    screenWidth;
@@ -104,7 +106,7 @@ BOOL RegisterSnapClass( HANDLE instance )
 
     thisInstance = instance;
     wc.style = 0L;
-    wc.lpfnWndProc = (WNDPROC)DesktopProc;
+    wc.lpfnWndProc = GetWndProc( DesktopProc );
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
     wc.hInstance = thisInstance;

@@ -321,9 +321,8 @@ void _wpi_deletepres( WPI_PRES pres, HDC hdc )
     DevCloseDC( hdc );
 } /* _wpi_deletepres */
 
-int _wpi_dialogbox( HWND parent, WPI_PROC proc, WPI_INST inst, int res_id,
-                                                                void *data )
-/**********************************************************************/
+int _wpi_dialogbox( HWND parent, WPI_DLGPROC proc, WPI_INST inst, int res_id, void *data )
+/****************************************************************************************/
 {
     HWND                new_dlg;
     int                 ret;
@@ -1642,9 +1641,8 @@ void _wpi_getoldpen( WPI_PRES pres, HPEN oldobj )
     _wpi_free( oldpen );
 } /* _wpi_getoldpen */
 
-void _wpi_enumfonts( WPI_PRES pres, char *facename, WPI_ENUMFONTPROC proc,
-                                                                char *data )
-/************************************************************************/
+void _wpi_enumfonts( WPI_PRES pres, char *facename, WPI_FONTENUMPROC proc, char *data )
+/*************************************************************************************/
 /* This routine closely approximates the enumerate routine for Windows  */
 {
     PFONTMETRICS        pfm;
@@ -1688,7 +1686,7 @@ void _wpi_enumchildwindows( HWND hwnd, WPI_ENUMPROC proc, LPARAM data )
 
     hnext = WinGetNextWindow( henum );
     while( hnext && ret ) {
-        ret = proc( hnext, (LONG)data );
+        ret = proc( hnext, data );
         hnext = WinGetNextWindow( henum );
     }
     WinEndEnumWindows( henum );
@@ -2462,20 +2460,6 @@ int _wpi_devicecapableinch( WPI_PRES pres, int what )
     return( (int)result );
 } /* _wpi_devicecapableinch */
 
-void _wpi_setmaxtracksize( WPI_MINMAXINFO *info, int width, int height )
-/**********************************************************************/
-{
-    info->ptlMaxTrackSize.x = (LONG)width;
-    info->ptlMaxTrackSize.y = (LONG)height;
-} /* _wpi_setmaxtracksize */
-
-void _wpi_setmintracksize( WPI_MINMAXINFO *info, int width, int height )
-/**********************************************************************/
-{
-    info->ptlMinTrackSize.x = (LONG)width;
-    info->ptlMinTrackSize.y = (LONG)height;
-} /* _wpi_setmintracksize */
-
 void _wpi_setwpiinst( HINSTANCE hinst, HMODULE module, WPI_INST *inst )
 /*********************************************************************/
 {
@@ -2954,9 +2938,8 @@ LONG _wpi_getclipbox( WPI_PRES pres, WPI_PRECT rcl )
     return( rc );
 }/* _wpi_getclipbox */
 
-int _wpi_dlg_command( HWND dlg_hld, WPI_MSG *msg, WPI_PARAM1 *parm1,
-                                                        WPI_PARAM2 *parm2 )
-/*************************************************************************/
+int _wpi_dlg_command( HWND dlg_hld, WPI_MSG *msg, WPI_PARAM1 *parm1, WPI_PARAM2 *parm2 )
+/**************************************************************************************/
 {
     dlg_hld = dlg_hld;
 

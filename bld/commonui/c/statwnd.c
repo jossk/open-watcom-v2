@@ -36,7 +36,7 @@
 #include "statwnd.h"
 #include "mem.h"
 #include "loadcc.h"
-
+#include "wprocmap.h"
 
 /*
  * The window must always be the first member of this structure so that
@@ -325,57 +325,11 @@ WINEXPORT WPI_MRESULT CALLBACK StatusWndCallback( HWND hwnd, WPI_MSG msg, WPI_PA
 /*
  * StatusWndInit - initialize for using the status window
  */
-int StatusWndInit( WPI_INST hinstance, statushook hook, int extra,
-                   HCURSOR hDefaultCursor )
+int StatusWndInit( WPI_INST hinstance, statushook hook, int extra, HCURSOR hDefaultCursor )
 {
-#ifndef __OS2_PM__
-    /* Win16 and Win32 version of the initialization */
-    WNDCLASS    wc;
     int         rc;
-
-#ifdef __NT__
-    if( LoadCommCtrl() ) {
-        return( 1 );
-    } else {
-#endif
-        if( !hasGDIObjects ) {
-            colorButtonFace = GetSysColor( COLOR_BTNFACE );
-            colorTextFace = GetSysColor( COLOR_BTNTEXT );
-            brushButtonFace = CreateSolidBrush( colorButtonFace );
-            penLight = CreatePen( PS_SOLID, 1, GetSysColor( COLOR_BTNHIGHLIGHT ) );
-            penShade = CreatePen( PS_SOLID, 1, GetSysColor( COLOR_BTNSHADOW ) );
-            hasGDIObjects = TRUE;
-        }
-
-        statusWndHookFunc = hook;
-
-        rc = TRUE;
-        if( !GetClassInfo( hinstance, className, &wc ) ) {
-            classHandle = hinstance;
-            classWinExtra = extra;
-            wc.style = CS_HREDRAW | CS_VREDRAW;
-            wc.lpfnWndProc = (WNDPROC)StatusWndCallback;
-            wc.cbClsExtra = 0;
-            wc.cbWndExtra = extra + sizeof( statwnd * );
-            wc.hInstance = hinstance;
-            wc.hIcon = LoadIcon( (HINSTANCE)NULL, IDI_APPLICATION );
-            wc.hCursor = hDefaultCursor;
-            if( wc.hCursor == NULL ) {
-                wc.hCursor = LoadCursor( (HINSTANCE)NULL, IDC_ARROW );
-            }
-            wc.hbrBackground = (HBRUSH) 0;
-            wc.lpszMenuName = NULL;
-            wc.lpszClassName = className;
-            rc = RegisterClass( &wc );
-            classRegistered = TRUE;
-        }
-        return( rc );
-#ifdef __NT__
-    }
-#endif
-#else
+#ifdef __OS2_PM__
     /* OS/2 PM version of the initialization */
-    int         rc;
 
     colorButtonFace = CLR_PALEGRAY;
 
@@ -397,8 +351,51 @@ int StatusWndInit( WPI_INST hinstance, statushook hook, int extra,
         classWinExtra = extra;
         classRegistered = TRUE;
     }
-    return( rc );
+#else
+    /* Win16 and Win32 version of the initialization */
+    WNDCLASS    wc;
+
+#ifdef __NT__
+    if( LoadCommCtrl() ) {
+        rc = TRUE;
+    } else {
 #endif
+        if( !hasGDIObjects ) {
+            colorButtonFace = GetSysColor( COLOR_BTNFACE );
+            colorTextFace = GetSysColor( COLOR_BTNTEXT );
+            brushButtonFace = CreateSolidBrush( colorButtonFace );
+            penLight = CreatePen( PS_SOLID, 1, GetSysColor( COLOR_BTNHIGHLIGHT ) );
+            penShade = CreatePen( PS_SOLID, 1, GetSysColor( COLOR_BTNSHADOW ) );
+            hasGDIObjects = TRUE;
+        }
+
+        statusWndHookFunc = hook;
+
+        rc = TRUE;
+        if( !GetClassInfo( hinstance, className, &wc ) ) {
+            classHandle = hinstance;
+            classWinExtra = extra;
+            wc.style = CS_HREDRAW | CS_VREDRAW;
+            wc.lpfnWndProc = GetWndProc( StatusWndCallback );
+            wc.cbClsExtra = 0;
+            wc.cbWndExtra = extra + sizeof( statwnd * );
+            wc.hInstance = hinstance;
+            wc.hIcon = LoadIcon( (HINSTANCE)NULL, IDI_APPLICATION );
+            wc.hCursor = hDefaultCursor;
+            if( wc.hCursor == NULL ) {
+                wc.hCursor = LoadCursor( (HINSTANCE)NULL, IDC_ARROW );
+            }
+            wc.hbrBackground = (HBRUSH) 0;
+            wc.lpszMenuName = NULL;
+            wc.lpszClassName = className;
+            rc = RegisterClass( &wc );
+            classRegistered = TRUE;
+        }
+#ifdef __NT__
+    }
+#endif
+#endif
+    return( rc );
 
 } /* StatusWndInit */
 
@@ -579,7 +576,7 @@ void outputText( statwnd *sw, WPI_PRES pres, char *buff, WPI_RECT *r, UINT flags
 {
     WPI_RECT    ir;
     WPI_RECT    draw_rect;
-    int         len;
+    size_t      len;
     int         ext;
     int         width;
     WPI_RECTDIM ir_left;

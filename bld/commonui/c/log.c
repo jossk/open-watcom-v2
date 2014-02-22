@@ -47,6 +47,7 @@
 #endif
 #include "ldstr.h"
 #include "uistr.gh"
+#include "wprocmap.h"
 
 
 static LogInfo          LogCurInfo;
@@ -67,7 +68,7 @@ static void writeCRLF( int f )
 /*
  * LogSaveHook - hook used called by common dialog - for 3D controls
  */
-WINEXPORT BOOL CALLBACK LogSaveHook( HWND hwnd, int msg, WPARAM wparam, LPARAM lparam )
+WINEXPORT UINT_PTR CALLBACK LogSaveHook( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
 {
     wparam = wparam;
     lparam = lparam;
@@ -115,12 +116,11 @@ static BOOL getLogName( char *buf, HWND hwnd )
     of.Flags = OFN_HIDEREADONLY;
 #ifndef NOUSE3D
     of.Flags |= OFN_ENABLEHOOK;
-    of.lpfnHook = (LPOFNHOOKPROC)MakeProcInstance( (LPVOID)LogSaveHook,
-                                                    LogCurInfo.instance );
+    of.lpfnHook = (LPOFNHOOKPROC)MakeOpenFileHookProcInstance( LogSaveHook, LogCurInfo.instance );
 #endif
     rc = GetSaveFileName( &of );
 #ifndef NOUSE3D
-    FreeProcInstance( (LPVOID)of.lpfnHook );
+    FreeProcInstance( (FARPROC)of.lpfnHook );
 #endif
     FreeRCString( (char *)of.lpstrTitle );
     if( !rc ) {
@@ -160,7 +160,7 @@ static void flushLog( BOOL free )
 /*
  * LogExistsDlgProc - handle the log exists dialog
  */
-WINEXPORT BOOL CALLBACK LogExistsDlgProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
+WINEXPORT INT_PTR CALLBACK LogExistsDlgProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
 {
     lparam = lparam;
     switch( msg ) {
@@ -185,7 +185,7 @@ WINEXPORT BOOL CALLBACK LogExistsDlgProc( HWND hwnd, UINT msg, WPARAM wparam, LP
 /*
  * ConfigLogDlgProc - handle the configure log dialog
  */
-WINEXPORT BOOL CALLBACK ConfigLogDlgProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
+WINEXPORT INT_PTR CALLBACK ConfigLogDlgProc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
 {
     char    *buf;
 
@@ -275,9 +275,8 @@ void LogConfigure( void )
     if( LogCurInfo.config.type == LOG_TYPE_BUFFER ) {
         flushLog( TRUE );
     }
-    fp = MakeProcInstance( (FARPROC)ConfigLogDlgProc, LogCurInfo.instance );
-    DialogBox( LogCurInfo.instance, "LOG_CFG_DLG",
-               LogCurInfo.hwnd, (DLGPROC)fp );
+    fp = MakeDlgProcInstance( ConfigLogDlgProc, LogCurInfo.instance );
+    DialogBox( LogCurInfo.instance, "LOG_CFG_DLG", LogCurInfo.hwnd, (DLGPROC)fp );
     FreeProcInstance( fp );
 
 } /* LogConfigure */
@@ -370,7 +369,7 @@ void LoadLogConfig( char *fname, char *section )
  */
 void SpyLogOut( char *res )
 {
-    unsigned    len;
+    size_t  len;
 
     if( !LogCurInfo.config.logging || LogCurInfo.config.paused ) {
         return;
@@ -399,7 +398,7 @@ BOOL SpyLogOpen( void )
     int         f;
     WORD        flags;
     FARPROC     fp;
-    WORD        ret;
+    INT_PTR     ret;
     char        *msgtitle;
 
     flags = 0;
@@ -421,9 +420,8 @@ BOOL SpyLogOpen( void )
         break;
     case LOG_ACTION_QUERY:
         if( !access( LogCurInfo.config.curname, F_OK ) ) {
-            fp = MakeProcInstance( (FARPROC)LogExistsDlgProc, LogCurInfo.instance );
-            ret = DialogBox( LogCurInfo.instance, "LOG_EXISTS_DLG",
-                             LogCurInfo.hwnd, (DLGPROC)fp );
+            fp = MakeDlgProcInstance( LogExistsDlgProc, LogCurInfo.instance );
+            ret = DialogBox( LogCurInfo.instance, "LOG_EXISTS_DLG", LogCurInfo.hwnd, (DLGPROC)fp );
             FreeProcInstance( fp );
             switch( ret ) {
             case LOG_APPEND:

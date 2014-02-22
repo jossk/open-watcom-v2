@@ -38,6 +38,7 @@
 #include "mem.h"
 #include "toolbr.h"
 #include "loadcc.h"
+#include "wprocmap.h"
 
 typedef struct tool {
     struct tool *next;
@@ -348,7 +349,7 @@ toolbar *ToolBarInit( HWND parent )
     if( LoadCommCtrl() ) {
         if( !GetClassInfo( instance, containerClassName, &wc ) ) {
             wc.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-            wc.lpfnWndProc = (WNDPROC)ToolContainerWndProc;
+            wc.lpfnWndProc = GetWndProc( ToolContainerWndProc );
             wc.cbClsExtra = 0;
             wc.cbWndExtra = 0;
             wc.hInstance = instance;
@@ -363,7 +364,7 @@ toolbar *ToolBarInit( HWND parent )
 #endif
         if( !GetClassInfo( instance, className, &wc ) ) {
             wc.style = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-            wc.lpfnWndProc = (WNDPROC)ToolBarWndProc;
+            wc.lpfnWndProc = GetWndProc( ToolBarWndProc );
             wc.lpszMenuName = NULL;
             wc.cbClsExtra = 0;
             wc.cbWndExtra = sizeof( LPVOID );
@@ -397,7 +398,7 @@ toolbar *ToolBarInit( HWND parent )
     appInst.mod_handle = (HMODULE)0;
 
     if( !toolBarClassRegistered ) {
-        rc = WinRegisterClass( hab, className, (PFNWP)ToolBarWndProc,
+        rc = WinRegisterClass( hab, className, GetWndProc( ToolBarWndProc ),
                                CS_MOVENOTIFY | CS_SIZEREDRAW | CS_CLIPSIBLINGS,
                                sizeof( PVOID ) );
         toolBarClassRegistered = TRUE;
@@ -800,7 +801,7 @@ void ToolBarDisplay( toolbar *bar, TOOLDISPLAYINFO *disp )
         }
         bar->old_wndproc = (WNDPROC)GET_WNDPROC( bar->hwnd );
         SetProp( bar->hwnd, "bar", (LPVOID)bar );
-        SET_WNDPROC( bar->hwnd, (LONG_PTR)WinToolWndProc );
+        SET_WNDPROC( bar->hwnd, (LONG_PTR)GetWndProc( WinToolWndProc ) );
         SendMessage( bar->hwnd, TB_BUTTONSTRUCTSIZE, sizeof( TBBUTTON ), 0L );
         if( disp->use_tips ) {
             bar->tooltips = CreateWindow( TOOLTIPS_CLASS, NULL,
@@ -850,8 +851,7 @@ void ToolBarDisplay( toolbar *bar, TOOLDISPLAYINFO *disp )
     } else {
         parent = HWND_DESKTOP;
     }
-    frame = WinCreateStdWindow( parent, 0L, &disp->style, NULL, "", 0L, (HMODULE)0,
-                                0, NULL );
+    frame = WinCreateStdWindow( parent, 0L, &disp->style, NULL, "", 0L, (HMODULE)0, 0, NULL );
 
     WinSetOwner( frame, bar->owner );
     oldFrameProc = _wpi_subclasswindow( frame, (WPI_PROC)FrameProc );
@@ -1420,7 +1420,7 @@ WINEXPORT WPI_MRESULT CALLBACK ToolBarWndProc( HWND hwnd, WPI_MSG msg, WPI_PARAM
         bar = (toolbar *)PVOIDFROMMP( wparam );
         WinSetPresParam( hwnd, PP_BACKGROUNDCOLORINDEX, (ULONG)sizeof( LONG ) + 1, (PVOID)&btnColor );
 #elif defined( __WINDOWS_386__ )
-        bar = MapAliasToFlat( (DWORD)((CREATESTRUCT FAR *)MK_FP32( (void *)lparam ))->lpCreateParams );
+        bar = MapAliasToFlat( (DWORD)((CREATESTRUCT __far *)MK_FP32( (void *)lparam ))->lpCreateParams );
 #else
         bar = (toolbar *)((CREATESTRUCT *)lparam)->lpCreateParams;
 #endif

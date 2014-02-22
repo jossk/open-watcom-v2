@@ -35,6 +35,7 @@
 #include "guicombo.h"
 #include "guicontr.h"
 #include "guixhook.h"
+#include "wprocmap.h"
 
 extern  controls_struct GUIControls[];
 extern  WPI_INST        GUIMainHInst;
@@ -44,11 +45,7 @@ typedef struct {
     WPI_PROC    old;
 } enum_info;
 
-#if defined( __UNIX__ )
-BOOL GUIEnumFunc( HWND hwnd, LONG lparam )
-#else
-BOOL CALLBACK GUIEnumFunc( HWND hwnd, LPARAM lparam )
-#endif
+BOOL CALLBACK GUISubClassEditComboboxEnumFunc( HWND hwnd, WPI_PARAM2 lparam )
 {
     char        buff[5];
     enum_info   *info;
@@ -75,11 +72,11 @@ BOOL CALLBACK GUIEnumFunc( HWND hwnd, LPARAM lparam )
 WPI_PROC GUISubClassEditCombobox( HWND hwnd )
 {
     enum_info           e_info;
-    WPI_ENUMPROC        enum_func;
+    WPI_ENUMPROC        fp;
 
     e_info.success = FALSE;
-    enum_func = _wpi_makeenumprocinstance( (WPI_PROC) GUIEnumFunc, GUIMainHInst );
-    _wpi_enumchildwindows( hwnd, enum_func, (LPARAM)&e_info );
+    fp = _wpi_makeenumprocinstance( GUISubClassEditComboboxEnumFunc, GUIMainHInst );
+    _wpi_enumchildwindows( hwnd, fp, (LPARAM)&e_info );
     if( e_info.success ) {
         return( e_info.old );
     }

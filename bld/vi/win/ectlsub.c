@@ -31,6 +31,7 @@
 
 
 #include "vi.h"
+#include "wprocmap.h"
 
 static WNDPROC      oldEditProc;
 static FARPROC      editProc;
@@ -165,7 +166,7 @@ void EditSubClass( HWND hwnd, int id, history_data *h )
     currHist = h->curr;
     edit = GetDlgItem( hwnd, id );
     oldEditProc = (WNDPROC)GET_WNDPROC( edit );
-    editProc = MakeProcInstance( (FARPROC)EditSubClassProc, InstanceHandle );
+    editProc = MakeWndProcInstance( EditSubClassProc, InstanceHandle );
     SET_WNDPROC( edit, (LONG_PTR)editProc );
     SendMessage( edit, EM_LIMITTEXT, MAX_INPUT_LINE, 0L );
 

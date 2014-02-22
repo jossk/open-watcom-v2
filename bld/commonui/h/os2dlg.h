@@ -36,9 +36,6 @@ extern void * PMrealloc( void * ptr, size_t size );
 
 #define _ISFAR
 #define _FARmemcpy      memcpy
-#ifndef MK_FP32
-    #define MK_FP32( a )        ( a )
-#endif
 #define SLEN( a ) (safeStrLen((a))+0)
 #define ADJUST_ITEMLEN( a )
 #define ADJUST_BLOCKLEN( a )
@@ -73,6 +70,6 @@ extern TEMPLATE_HANDLE AddControl     ( TEMPLATE_HANDLE data, int dtilx,
                                         int id, long style, char *class,
                                         char *text, BYTE infolen,
                                         char *infodata );
-extern int DynamicDialogBox           ( PVOID fn, WPI_INST inst, HWND hwnd,
-                                        TEMPLATE_HANDLE data, LONG lparam );
+extern int DynamicDialogBox           ( PFNWP fn, WPI_INST inst, HWND hwnd,
+                                        TEMPLATE_HANDLE data, MPARAM lparam );
 
